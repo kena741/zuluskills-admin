@@ -24,3 +24,155 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Consistent, human-readable defaults for learning rich text */
+.learning-richtext {
+  /* Typography */
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: 0.002em;
+
+  /* Color inherits from surface */
+  color: inherit;
+}
+
+.learning-richtext p {
+  margin: 0.6rem 0;
+}
+.learning-richtext p:first-child {
+  margin-top: 0.25rem;
+}
+.learning-richtext p:last-child {
+  margin-bottom: 0.25rem;
+}
+
+.learning-richtext h2 {
+  font-size: 1.25rem; /* ~20px */
+  line-height: 1.4;
+  font-weight: 700;
+  margin: 1.25rem 0 0.5rem;
+  color: inherit;
+}
+.learning-richtext h3 {
+  font-size: 1.125rem; /* ~18px */
+  line-height: 1.5;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+  color: inherit;
+}
+
+.learning-richtext strong {
+  font-weight: 600;
+  color: inherit;
+}
+.learning-richtext em {
+  font-style: italic;
+  color: inherit;
+}
+.learning-richtext u {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  color: inherit;
+}
+
+.learning-richtext a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+@media (prefers-color-scheme: dark) {
+  .learning-richtext a {
+    color: #60a5fa;
+  }
+}
+
+.learning-richtext ul,
+.learning-richtext ol {
+  margin: 0.5rem 0 0.75rem 1.25rem;
+  padding-left: 1.1rem;
+}
+.learning-richtext ul {
+  list-style-type: disc;
+}
+.learning-richtext ol {
+  list-style-type: decimal;
+}
+.learning-richtext li {
+  margin: 0.25rem 0;
+}
+
+.learning-richtext blockquote {
+  border-left: 3px solid rgba(0, 0, 0, 0.15);
+  padding-left: 0.75rem;
+  margin: 1rem 0;
+  color: rgba(0, 0, 0, 0.8);
+}
+@media (prefers-color-scheme: dark) {
+  .learning-richtext blockquote {
+    border-left-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+.learning-richtext code,
+.learning-richtext pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+.learning-richtext code {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  .learning-richtext code {
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+.learning-richtext pre {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+@media (prefers-color-scheme: dark) {
+  .learning-richtext pre {
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+.learning-richtext hr {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin: 1rem 0;
+}
+@media (prefers-color-scheme: dark) {
+  .learning-richtext hr {
+    border-top-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.learning-richtext table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+.learning-richtext th,
+.learning-richtext td {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 0.5rem;
+  text-align: left;
+}
+@media (prefers-color-scheme: dark) {
+  .learning-richtext th,
+  .learning-richtext td {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.learning-richtext ::selection {
+  background: rgba(37, 99, 235, 0.18);
+}

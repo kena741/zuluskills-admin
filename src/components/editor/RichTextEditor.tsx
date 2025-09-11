@@ -15,6 +15,86 @@ type Props = {
 };
 
 export default function RichTextEditor({ value, onChange }: Props) {
+    // Normalize pasted HTML to keep fonts/colors consistent and human-readable
+    const sanitizePastedHTML = (html: string) => {
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "text/html");
+
+            const replaceTag = (el: Element, newTag: string) => {
+                const replacement = doc.createElement(newTag);
+                while (el.firstChild) replacement.appendChild(el.firstChild);
+                el.parentNode?.replaceChild(replacement, el);
+                return replacement;
+            };
+
+            // Map heading levels (avoid very large/small sizes on paste)
+            doc.querySelectorAll("h1").forEach((el) => replaceTag(el, "h2"));
+            doc.querySelectorAll("h4, h5, h6").forEach((el) => replaceTag(el, "h3"));
+
+            // Clean attributes and unwrap purely presentational tags
+            Array.from(doc.body.querySelectorAll("*"))
+                .forEach((el) => {
+                    const tag = el.tagName.toLowerCase();
+
+                    // Unwrap font tags entirely
+                    if (tag === "font") {
+                        const parent = el.parentNode;
+                        if (parent) {
+                            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                            parent.removeChild(el);
+                        }
+                        return;
+                    }
+
+                    // If span only provides presentation, unwrap it
+                    if (tag === "span") {
+                        const names = el.getAttributeNames();
+                        const onlyPresentational = names.length === 0 || names.every((n) => ["style", "class", "id", "color"].includes(n));
+                        if (onlyPresentational) {
+                            const parent = el.parentNode;
+                            if (parent) {
+                                while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                                parent.removeChild(el);
+                            }
+                            return;
+                        }
+                    }
+
+                    // For all elements, drop presentational attributes
+                    const keepAttrs = tag === "a" ? ["href", "target", "rel", "title"] : [];
+                    Array.from(el.attributes).forEach((attr) => {
+                        if (!keepAttrs.includes(attr.name)) el.removeAttribute(attr.name);
+                    });
+
+                    if (tag === "a") {
+                        const href = el.getAttribute("href") || "";
+                        if (/^\s*javascript:/i.test(href)) {
+                            el.removeAttribute("href");
+                        } else {
+                            el.setAttribute("target", "_blank");
+                            el.setAttribute("rel", "noopener noreferrer nofollow");
+                        }
+                    }
+                });
+
+            // Convert stray divs to paragraphs to keep structure simple
+            doc.querySelectorAll("div").forEach((el) => {
+                // Only convert divs that don't contain block-level lists/pre/code
+                if (!el.querySelector("ul,ol,pre,code,blockquote,table")) {
+                    replaceTag(el, "p");
+                }
+            });
+
+            return (doc.body.innerHTML || "").trim();
+        } catch {
+            // In case of any error, fall back to plain text
+            const tmp = document.createElement("div");
+            tmp.textContent = html;
+            return tmp.innerHTML;
+        }
+    };
+
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -29,8 +109,10 @@ export default function RichTextEditor({ value, onChange }: Props) {
         editorProps: {
             attributes: {
                 class:
-                    "min-h-[220px] px-3 py-3 outline-none focus:outline-none max-w-none bg-white text-gray-900 dark:bg-neutral-900 dark:text-neutral-100 leading-relaxed",
+                    "learning-richtext min-h-[220px] px-3 py-3 outline-none focus:outline-none max-w-none bg-white text-gray-900 dark:bg-neutral-900 dark:text-neutral-100",
             },
+            // Normalize pasted content to strip custom fonts/colors/styles
+            transformPastedHTML: sanitizePastedHTML,
         },
         content: value || "",
         onUpdate: ({ editor }) => {
@@ -84,6 +166,14 @@ export default function RichTextEditor({ value, onChange }: Props) {
                     onClick={() => editor.chain().focus().toggleUnderline().run()}
                 >
                     U
+                </button>
+                <button
+                    type="button"
+                    className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-800 dark:text-neutral-100"
+                    onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+                    title="Clear formatting"
+                >
+                    Clear
                 </button>
                 <span className="mx-1 opacity-40">|</span>
                 <button
