@@ -121,6 +121,31 @@ export const fetchCourseById = createAsyncThunk<
     }
 });
 
+// Thunk to update a course by ID
+export const updateCourse = createAsyncThunk<
+    Course,
+    { id: number | string; changes: Partial<Pick<Course, "title" | "description" | "slug">> },
+    { rejectValue: string }
+>("courses/update", async ({ id, changes }, { rejectWithValue }) => {
+    try {
+        const client = supabase;
+        if (!client) return rejectWithValue("Supabase is not configured");
+        const payload = { ...changes, updated_at: new Date().toISOString() };
+        const { data, error } = await client
+            .from("courses")
+            .update(payload)
+            .eq("id", id)
+            .select("id, slug, title, description, created_at, updated_at")
+            .maybeSingle();
+        if (error) return rejectWithValue(error.message);
+        if (!data) return rejectWithValue("Course not found after update");
+        return data as Course;
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        return rejectWithValue(msg);
+    }
+});
+
 // Thunk to fetch the current user's progress for the listed courses in state
 export const fetchUserCourseProgress = createAsyncThunk<
     Record<string, "in-progress" | "completed">,
@@ -256,6 +281,22 @@ const coursesSlice = createSlice({
             .addCase(startCourse.fulfilled, (state, action) => {
                 const { courseId } = action.payload;
                 state.progress[courseId] = "in-progress";
+            })
+            // Update course
+            .addCase(updateCourse.pending, (state) => {
+                state.status = "loading";
+                state.error = null;
+            })
+            .addCase(updateCourse.fulfilled, (state, action) => {
+                state.status = "succeeded";
+                const updated = action.payload;
+                const idx = state.items.findIndex((c) => `${c.id}` === `${updated.id}`);
+                if (idx >= 0) state.items[idx] = { ...state.items[idx], ...updated };
+                else state.items.push(updated);
+            })
+            .addCase(updateCourse.rejected, (state, action) => {
+                state.status = "failed";
+                state.error = action.payload ?? "Failed to update course";
             });
     },
 });

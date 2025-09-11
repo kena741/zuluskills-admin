@@ -3,27 +3,30 @@ import { supabase } from "@/supabaseClient";
 
 // Lessons table entity (as provided)
 export type LessonRecord = {
-    id: number | string; // bigserial in DB
-    module_id: number | string; // bigint FK -> modules.id
-    title: string; // text
-    slug?: string | null; // text
-    ordinal: number; // int default 0
-    content?: string | null; // text (markdown)
-    video_url?: string | null; // text
-    duration_seconds?: number | null; // int
-    created_at?: string | null; // timestamptz
+    id: number | string;
+    module_id: number | string;
+    title: string;
+    slug?: string | null;
+    ordinal: number;
+    content?: string | null;
+    video_url?: string | null;
+    duration_seconds?: number | null;
+    created_at?: string | null;
 };
 
 export type LessonsState = {
     items: LessonRecord[];
     status: "idle" | "loading" | "succeeded" | "failed";
     error?: string | null;
+    // Cached lesson resources by lesson id
+    resourcesByLessonId?: Record<string, LessonResourceRecord[]>;
 };
 
 const initialState: LessonsState = {
     items: [],
     status: "idle",
     error: null,
+    resourcesByLessonId: {},
 };
 
 // Fetch lessons by one or many lesson IDs
@@ -56,6 +59,61 @@ export const fetchLessonsByIds = createAsyncThunk<
     }
 });
 
+// Lesson resources entity
+export type LessonResourceRecord = {
+    id: number | string;
+    lesson_id: number | string;
+    title: string;
+    url?: string | null;
+    resource_type?: string | null;
+    created_at?: string | null;
+};
+
+// Fetch resources for a specific lesson
+export const fetchLessonResources = createAsyncThunk<
+    { lessonId: number | string; resources: LessonResourceRecord[] },
+    { lessonId: number | string },
+    { rejectValue: string }
+>("lessons/fetchResources", async ({ lessonId }, { rejectWithValue }) => {
+    try {
+        const client = supabase;
+        if (!client) return rejectWithValue("Supabase is not configured");
+        const { data, error } = await client
+            .from("lesson_resources")
+            .select("id, lesson_id, title, url, resource_type, created_at")
+            .eq("lesson_id", lessonId);
+        if (error) return rejectWithValue(error.message);
+        return { lessonId, resources: (data ?? []) as LessonResourceRecord[] };
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        return rejectWithValue(msg);
+    }
+});
+
+// Update a single lesson resource by id
+export const updateLessonResource = createAsyncThunk<
+    LessonResourceRecord,
+    { id: number | string; changes: Partial<Pick<LessonResourceRecord, "title" | "url" | "resource_type">> },
+    { rejectValue: string }
+>("lessons/updateResource", async ({ id, changes }, { rejectWithValue }) => {
+    try {
+        const client = supabase;
+        if (!client) return rejectWithValue("Supabase is not configured");
+        const updates = { ...changes } as Record<string, unknown>;
+        const { data, error } = await client
+            .from("lesson_resources")
+            .update(updates)
+            .eq("id", id)
+            .select("id, lesson_id, title, url, resource_type, created_at")
+            .single();
+        if (error) return rejectWithValue(error.message);
+        return (data ?? null) as unknown as LessonResourceRecord;
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        return rejectWithValue(msg);
+    }
+});
+
 // Fetch a single lesson by its ID
 export const fetchLessonById = createAsyncThunk<
     LessonRecord | null,
@@ -75,6 +133,35 @@ export const fetchLessonById = createAsyncThunk<
 
         if (error) return rejectWithValue(error.message);
         return (data as LessonRecord) ?? null;
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        return rejectWithValue(msg);
+    }
+});
+
+// Update a lesson by id
+export const updateLesson = createAsyncThunk<
+    LessonRecord,
+    {
+        id: number | string;
+        changes: Partial<Pick<LessonRecord, "title" | "slug" | "ordinal" | "content" | "video_url" | "duration_seconds">>;
+    },
+    { rejectValue: string }
+>("lessons/update", async ({ id, changes }, { rejectWithValue }) => {
+    try {
+        const client = supabase;
+        if (!client) return rejectWithValue("Supabase is not configured");
+        const updates = { ...changes } as Record<string, unknown>;
+
+        const { data, error } = await client
+            .from("lessons")
+            .update(updates)
+            .eq("id", id)
+            .select("id, module_id, title, slug, ordinal, content, video_url, duration_seconds, created_at")
+            .single();
+
+        if (error) return rejectWithValue(error.message);
+        return (data ?? null) as unknown as LessonRecord;
     } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         return rejectWithValue(msg);
@@ -135,6 +222,54 @@ const lessonsSlice = createSlice({
             .addCase(fetchLessonById.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload ?? "Failed to fetch lesson";
+            })
+            .addCase(fetchLessonResources.pending, (state) => {
+                state.status = "loading";
+                state.error = null;
+            })
+            .addCase(fetchLessonResources.fulfilled, (state, action) => {
+                state.status = "succeeded";
+                const { lessonId, resources } = action.payload;
+                if (!state.resourcesByLessonId) state.resourcesByLessonId = {};
+                state.resourcesByLessonId[String(lessonId)] = resources;
+            })
+            .addCase(fetchLessonResources.rejected, (state, action) => {
+                state.status = "failed";
+                state.error = action.payload ?? "Failed to fetch lesson resources";
+            })
+            .addCase(updateLessonResource.pending, (state) => {
+                state.status = "loading";
+                state.error = null;
+            })
+            .addCase(updateLessonResource.fulfilled, (state, action) => {
+                state.status = "succeeded";
+                const updated = action.payload;
+                const key = String(updated.lesson_id);
+                const arr = (state.resourcesByLessonId?.[key] ?? []).slice();
+                const idx = arr.findIndex((r) => String(r.id) === String(updated.id));
+                if (idx >= 0) arr[idx] = updated;
+                else arr.push(updated);
+                if (!state.resourcesByLessonId) state.resourcesByLessonId = {};
+                state.resourcesByLessonId[key] = arr;
+            })
+            .addCase(updateLessonResource.rejected, (state, action) => {
+                state.status = "failed";
+                state.error = action.payload ?? "Failed to update lesson resource";
+            })
+            .addCase(updateLesson.pending, (state) => {
+                state.status = "loading";
+                state.error = null;
+            })
+            .addCase(updateLesson.fulfilled, (state, action) => {
+                state.status = "succeeded";
+                const l = action.payload;
+                const idx = state.items.findIndex((x) => `${x.id}` === `${l.id}`);
+                if (idx >= 0) state.items[idx] = l;
+                else state.items.push(l);
+            })
+            .addCase(updateLesson.rejected, (state, action) => {
+                state.status = "failed";
+                state.error = action.payload ?? "Failed to update lesson";
             });
     },
 });

@@ -124,6 +124,35 @@ export const fetchModules = createAsyncThunk<
     }
 });
 
+// Thunk to update a single module by id
+export const updateModule = createAsyncThunk<
+    ModuleRecord,
+    { id: number | string; changes: Partial<Pick<ModuleRecord, "title" | "description" | "ordinal">> },
+    { rejectValue: string }
+>("modules/update", async ({ id, changes }, { rejectWithValue }) => {
+    try {
+        const client = supabase;
+        if (!client) return rejectWithValue("Supabase is not configured");
+        const updates = {
+            ...changes,
+        } as Record<string, unknown>;
+
+        const { data, error } = await client
+            .from("modules")
+            .update(updates)
+            .eq("id", id)
+            .select("id, course_id, title, description, ordinal, created_at")
+            .single();
+
+
+        if (error) return rejectWithValue(error.message);
+        return (data ?? null) as unknown as ModuleRecord;
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        return rejectWithValue(msg);
+    }
+});
+
 const modulesSlice = createSlice({
     name: "modules",
     initialState,
@@ -158,6 +187,30 @@ const modulesSlice = createSlice({
             .addCase(fetchModules.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload ?? "Failed to fetch modules";
+            })
+            .addCase(updateModule.pending, (state) => {
+                state.status = "loading";
+                state.error = null;
+            })
+            .addCase(updateModule.fulfilled, (state, action) => {
+                state.status = "succeeded";
+                const updated = action.payload as ModuleRecord;
+                const idx = state.items.findIndex((m) => String(m.id) === String(updated.id));
+                if (idx >= 0) {
+                    const prev = state.items[idx];
+                    state.items[idx] = {
+                        ...prev,
+                        ...updated,
+                        // Preserve previously loaded lessons unless the update included them
+                        lessons: (typeof updated.lessons !== "undefined" ? updated.lessons : prev.lessons),
+                    } as ModuleRecord;
+                } else {
+                    state.items.push(updated);
+                }
+            })
+            .addCase(updateModule.rejected, (state, action) => {
+                state.status = "failed";
+                state.error = action.payload ?? "Failed to update module";
             });
     },
 });

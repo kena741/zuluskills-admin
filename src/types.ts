@@ -1,3 +1,10 @@
+export type ModuleRecord = {
+    id: string;
+    title: string;
+    description?: string;
+    ordinal?: number;
+    // Add other fields as needed
+};
 export type LessonType = "video" | "text" | "task" | "quiz";
 
 export type Lesson = {
