@@ -219,7 +219,7 @@ export default function AdminModule() {
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn" tabIndex={-1}>
                     {/* Overlay click closes modal */}
                     <div className="absolute inset-0" onClick={() => { setShowLessonModal(false); setError(null); setSuccess(false); }} />
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-3xl relative animate-slideUp z-[10000]" role="dialog" aria-modal="true">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-3xl relative animate-slideUp z-[10000] max-h-[85vh] overflow-y-auto overscroll-contain" role="dialog" aria-modal="true">
                         <button
                             className="absolute top-4 right-4 text-2xl font-bold text-gray-400 hover:text-gray-700 transition-colors"
                             onClick={() => { setShowLessonModal(false); setError(null); setSuccess(false); }}
@@ -261,7 +261,7 @@ export default function AdminModule() {
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn" tabIndex={-1}>
                     {/* Overlay click closes modal */}
                     <div className="absolute inset-0" onClick={() => { setShowLessonEditModal(false); setEditError(null); }} />
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-3xl relative animate-slideUp z-[10000]" role="dialog" aria-modal="true">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-3xl relative animate-slideUp z-[10000] max-h-[85vh] overflow-y-auto overscroll-contain" role="dialog" aria-modal="true">
                         <button
                             className="absolute top-4 right-4 text-2xl font-bold text-gray-400 hover:text-gray-700 transition-colors"
                             onClick={() => { setShowLessonEditModal(false); setEditError(null); }}
