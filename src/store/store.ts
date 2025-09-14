@@ -5,6 +5,7 @@ import coursesReducer from "@/features/courses/coursesSlice";
 import modulesReducer from "@/features/modules/modulesSlice";
 import lessonsReducer from "@/features/lessons/lessonsSlice";
 import authReducer from "@/features/auth/authSlice";
+import studentsReducer from "@/features/students/studentsSlice";
 
 
 // Register slice reducers here
@@ -13,6 +14,7 @@ const appReducer = combineReducers({
   courses: coursesReducer,
   modules: modulesReducer,
   lessons: lessonsReducer,
+  students: studentsReducer,
 });
 
 export type AppReducerState = ReturnType<typeof appReducer>;
